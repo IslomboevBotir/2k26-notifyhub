@@ -1,0 +1,28 @@
+{
+  "name": "notifyhub",
+  "version": "1.0.0",
+  "description": "NotifyHub - Bildirishnomalar xizmati konsol ilovasi (Design Patterns amaliyoti)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node --no-warnings --experimental-transform-types src/index.ts",
+    "test": "node --no-warnings --experimental-transform-types tests/notifyhub.test.ts"
+  },
+  "keywords": [
+    "design-patterns",
+    "typescript",
+    "oop",
+    "bridge",
+    "abstract-factory",
+    "decorator",
+    "adapter",
+    "singleton",
+    "composite",
+    "builder",
+    "prototype",
+    "facade",
+    "factory-method"
+  ],
+  "author": "NotifyHub Team",
+  "license": "ISC"
+}
