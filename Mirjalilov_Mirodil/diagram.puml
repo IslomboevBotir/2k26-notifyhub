@@ -1,0 +1,170 @@
+@startuml
+set namespaceSeparator ::
+
+abstract class "uni_tests::channels::channel.dart::Channel" {
+  +String name
+  +bool send()
+}
+
+class "uni_tests::channels::email_channel.dart::EmailChannel" {
+  +String name
+  +bool send()
+}
+
+"uni_tests::channels::channel.dart::Channel" <|-- "uni_tests::channels::email_channel.dart::EmailChannel"
+
+class "uni_tests::channels::legacy_sms_gateway.dart::LegacySmsGateway" {
+  +int sendSms()
+}
+
+class "uni_tests::channels::push_channel.dart::PushChannel" {
+  +String name
+  +bool send()
+}
+
+"uni_tests::channels::channel.dart::Channel" <|-- "uni_tests::channels::push_channel.dart::PushChannel"
+
+class "uni_tests::channels::sms_adapter.dart::SmsAdapter" {
+  +LegacySmsGateway legacySmsGateway
+  +String name
+  +bool send()
+}
+
+"uni_tests::channels::sms_adapter.dart::SmsAdapter" o-- "uni_tests::channels::legacy_sms_gateway.dart::LegacySmsGateway"
+"uni_tests::channels::channel.dart::Channel" <|-- "uni_tests::channels::sms_adapter.dart::SmsAdapter"
+
+class "uni_tests::channels::telegram_channel.dart::TelegramChannel" {
+  +String name
+  +bool send()
+}
+
+"uni_tests::channels::channel.dart::Channel" <|-- "uni_tests::channels::telegram_channel.dart::TelegramChannel"
+
+class "uni_tests::console::console_menu.dart::ConsoleMenu" {
+  +Recipient recipient
+  +void run()
+}
+
+"uni_tests::console::console_menu.dart::ConsoleMenu" o-- "uni_tests::models::recipient.dart::Recipient"
+
+abstract class "uni_tests::decorators::channel_decorator.dart::ChannelDecorator" {
+  +Channel channel
+  +String name
+  +bool send()
+}
+
+"uni_tests::decorators::channel_decorator.dart::ChannelDecorator" o-- "uni_tests::channels::channel.dart::Channel"
+"uni_tests::channels::channel.dart::Channel" <|-- "uni_tests::decorators::channel_decorator.dart::ChannelDecorator"
+
+class "uni_tests::decorators::encryption_decorator.dart::EncryptionDecorator" {
+  +bool send()
+}
+
+"uni_tests::decorators::channel_decorator.dart::ChannelDecorator" <|-- "uni_tests::decorators::encryption_decorator.dart::EncryptionDecorator"
+
+class "uni_tests::decorators::stamp_decorator.dart::StampDecorator" {
+  +bool send()
+}
+
+"uni_tests::decorators::channel_decorator.dart::ChannelDecorator" <|-- "uni_tests::decorators::stamp_decorator.dart::StampDecorator"
+
+class "uni_tests::decorators::time_decorator.dart::TimeDecorator" {
+  +bool send()
+}
+
+"uni_tests::decorators::channel_decorator.dart::ChannelDecorator" <|-- "uni_tests::decorators::time_decorator.dart::TimeDecorator"
+
+class "uni_tests::decorators::urgent_decorator.dart::UrgentDecorator" {
+  +bool send()
+}
+
+"uni_tests::decorators::channel_decorator.dart::ChannelDecorator" <|-- "uni_tests::decorators::urgent_decorator.dart::UrgentDecorator"
+
+class "uni_tests::factories::eng_template_factory.dart::EngTemplateFactory" {
+  +Message alert()
+  +Message reminder()
+  +Message promo()
+}
+
+"uni_tests::factories::template_factory.dart::TemplateFactory" <|-- "uni_tests::factories::eng_template_factory.dart::EngTemplateFactory"
+
+class "uni_tests::factories::ru_template_factory.dart::RuTemplateFactory" {
+  +Message alert()
+  +Message reminder()
+  +Message promo()
+}
+
+"uni_tests::factories::template_factory.dart::TemplateFactory" <|-- "uni_tests::factories::ru_template_factory.dart::RuTemplateFactory"
+
+abstract class "uni_tests::factories::template_factory.dart::TemplateFactory" {
+  +Message alert()
+  +Message reminder()
+  +Message promo()
+}
+
+class "uni_tests::factories::uz_template_factory.dart::UzTemplateFactory" {
+  +Message alert()
+  +Message reminder()
+  +Message promo()
+}
+
+"uni_tests::factories::template_factory.dart::TemplateFactory" <|-- "uni_tests::factories::uz_template_factory.dart::UzTemplateFactory"
+
+class "uni_tests::history::notification_history.dart::NotificationHistory" {
+  {static} -NotificationHistory _instance
+  -List<String> _history
+  -Map<String, int> _counterType
+  -Map<String, int> _counterChannel
+  -int _errors
+  +List<String> history
+  +Map<String, int> counterType
+  +Map<String, int> counterChannel
+  +void addType()
+  +void addChannel()
+  +void addError()
+  +void add()
+  +void clear()
+  +void showAll()
+  +void showStats()
+}
+
+"uni_tests::history::notification_history.dart::NotificationHistory" o-- "uni_tests::history::notification_history.dart::NotificationHistory"
+
+class "uni_tests::models::message.dart::Message" {
+  +String title
+  +String text
+}
+
+class "uni_tests::models::recipient.dart::Recipient" {
+  +String name
+  +String email
+  +String phone
+}
+
+class "uni_tests::notifications::alert_notification.dart::AlertNotification" {
+  +void notify()
+}
+
+"uni_tests::notifications::notification.dart::Notification" <|-- "uni_tests::notifications::alert_notification.dart::AlertNotification"
+
+abstract class "uni_tests::notifications::notification.dart::Notification" {
+  +Channel channel
+  +void notify()
+}
+
+"uni_tests::notifications::notification.dart::Notification" o-- "uni_tests::channels::channel.dart::Channel"
+
+class "uni_tests::notifications::promo_notification.dart::PromoNotification" {
+  +void notify()
+}
+
+"uni_tests::notifications::notification.dart::Notification" <|-- "uni_tests::notifications::promo_notification.dart::PromoNotification"
+
+class "uni_tests::notifications::reminder_notification.dart::ReminderNotification" {
+  +void notify()
+}
+
+"uni_tests::notifications::notification.dart::Notification" <|-- "uni_tests::notifications::reminder_notification.dart::ReminderNotification"
+
+
+@enduml
