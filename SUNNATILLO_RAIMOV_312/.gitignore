@@ -1,0 +1,6 @@
+node_modules/
+dist/
+notifications_log.txt
+*.log
+.DS_Store
+
