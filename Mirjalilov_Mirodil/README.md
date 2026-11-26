@@ -30,10 +30,10 @@ dart run bin/main.dart
 
 | Паттерн | Где | Что делает |
 |---|---|---|
-| **Bridge** | `lib/notifications`, `lib/channels` | Тип уведомления (`Notification`) отделён от канала отправки (`Channel`) и хранит его в поле `channel`. Любой тип можно отправить через любой канал: классов 3 + 4 = 7 вместо 3 × 4 = 12. |
+| **Bridge** | `lib/notifications/`, `lib/channels/` | Тип уведомления (`Notification`) отделён от канала отправки (`Channel`) и хранит его в поле `channel`. Любой тип можно отправить через любой канал: классов 3 + 4 = 7 вместо 3 × 4 = 12. |
 | **Adapter** | `lib/channels/sms_adapter.dart` | `SmsAdapter` приводит старый `LegacySmsGateway` к интерфейсу `Channel`, не меняя сам шлюз: текст превращается в байты (`utf8.encode`), приоритет передаётся как `priorityCode`, ответ `200` / `400` превращается в `true` / `false`. |
-| **Decorator** | `lib/decorators` | `Time`, `Stamp`, `Urgent`, `Encryption` реализуют `Channel`, хранят внутри другой канал, меняют текст и передают его дальше. Их можно комбинировать в любом порядке. |
-| **Abstract Factory** | `lib/factories` | `TemplateFactory` создаёт семейство шаблонов `alert(text)`, `reminder(text)`, `promo(text)`, а `Ru`, `Uz` и `Eng` оборачивают текст пользователя на своём языке. |
+| **Decorator** | `lib/decorators/` | `Time`, `Stamp`, `Urgent`, `Encryption` реализуют `Channel`, хранят внутри другой канал, меняют текст и передают его дальше. Их можно комбинировать в любом порядке. |
+| **Abstract Factory** | `lib/factories/` | `TemplateFactory` создаёт семейство шаблонов `alert(text)`, `reminder(text)`, `promo(text)`, а `Ru`, `Uz` и `Eng` оборачивают текст пользователя на своём языке. |
 | **Singleton** | `lib/history/notification_history.dart` | `NotificationHistory` существует в одном экземпляре (приватный конструктор, `static final _instance`, `factory`). Хранит историю, счётчики по типам и каналам и число ошибок. |
 
 ## Как сообщение проходит через программу

@@ -4,9 +4,9 @@ import '../models/message.dart';
 class UzTemplateFactory implements TemplateFactory {
 
   @override
-  Message alert(String text) => Message("Diqqat", "⚠️ DIQQAT: $text");
+  Message alert(String text) => Message("Diqqat", "DIQQAT: $text");
   @override
-  Message reminder(String text) => Message("Eslatma", "⏰ Eslatma: $text");
+  Message reminder(String text) => Message("Eslatma", "Eslatma: $text");
   @override
-  Message promo(String text) => Message("Aksiya", "🎁 Aksiya: $text");
+  Message promo(String text) => Message("Aksiya", "Aksiya: $text");
 }
