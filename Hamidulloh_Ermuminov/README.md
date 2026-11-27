@@ -5,7 +5,7 @@ OOP va dizayn patternlar asosida TypeScript (Node.js) da yozilgan konsol ilova (
 ## Loyiha tuzilmasi
 
 ```text
-2k26-notifyhub/
+Hamidulloh_Ermuminov/
 ├── src/
 │   ├── main.ts                          # Interaktiv konsol menyusi
 │   ├── types.ts                         # Umumiy domen turlari
@@ -61,6 +61,7 @@ OOP va dizayn patternlar asosida TypeScript (Node.js) da yozilgan konsol ilova (
 ## Ishga tushirish va testlar
 
 ```powershell
+cd Hamidulloh_Ermuminov
 npm install
 npm run build
 npm start
