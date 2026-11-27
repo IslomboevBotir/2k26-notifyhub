@@ -1,6 +1,14 @@
 import { stdin as input, stdout as output } from "node:process";
 import readline from "node:readline";
-import { NotifyHub } from "./core/hub.js";
+import type { Channel } from "./channels/base.js";
+import { ConsoleChannel } from "./channels/console.js";
+import { FileChannel } from "./channels/file.js";
+import { LegacySmsGateway, SmsChannelAdapter } from "./channels/sms_adapter.js";
+import { TelegramChannel } from "./channels/telegram.js";
+import { NotificationHistory } from "./core/history.js";
+import { getLocaleFactory } from "./locales/factories.js";
+import { createNotification } from "./notifications/types.js";
+import { createDefaultRecipients, Recipient } from "./recipients/recipients.js";
 import type {
   ChannelType,
   DecoratorKind,
@@ -87,7 +95,32 @@ function parseDecorators(raw: string): DecoratorKind[] {
     .map((item) => parseChoice(item, VALID_DECORATORS, "qo'shimcha"));
 }
 
-async function handleSend(reader: PromptReader, hub: NotifyHub): Promise<void> {
+function resolveChannel(channelType: ChannelType): Channel {
+  switch (channelType) {
+    case "console":
+      return new ConsoleChannel();
+    case "file":
+      return new FileChannel();
+    case "telegram":
+      return new TelegramChannel();
+    case "sms":
+      return new SmsChannelAdapter(new LegacySmsGateway());
+    default: {
+      const exhaustive: never = channelType;
+      throw new Error(`Noma'lum kanal: ${String(exhaustive)}`);
+    }
+  }
+}
+
+function findRecipient(recipients: readonly Recipient[], name: string): Recipient | undefined {
+  const normalized = name.trim().toLowerCase();
+  return recipients.find((r) => r.name.toLowerCase() === normalized);
+}
+
+async function handleSend(
+  reader: PromptReader,
+  recipients: readonly Recipient[]
+): Promise<void> {
   const type = parseChoice(
     await askRequired(reader, "Tur (alert / reminder / promo): "),
     VALID_TYPES,
@@ -98,83 +131,57 @@ async function handleSend(reader: PromptReader, hub: NotifyHub): Promise<void> {
     VALID_LOCALES,
     "til"
   );
-  const channel = parseChoice(
+  const channelType = parseChoice(
     await askRequired(reader, "Kanal (console / file / telegram / sms): "),
     VALID_CHANNELS,
     "kanal"
   );
   const recipientName = await askRequired(
     reader,
-    "Qabul qiluvchi (masalan: 3-kurs, 301-guruh, Ali, Bobur): "
+    "Qabul qiluvchi (masalan: Ali, Vali, Malika, Bobur): "
   );
+  const recipient = findRecipient(recipients, recipientName);
+  if (!recipient) {
+    throw new Error(`Qabul qiluvchi topilmadi: "${recipientName}"`);
+  }
+
   const text = await askRequired(reader, "Matn: ");
+  if (!text.trim()) {
+    throw new Error("Xabar matni bo'sh bo'lishi mumkin emas.");
+  }
+
   const decRaw = await askRequired(
     reader,
     "Qo'shimchalar (timestamp, signature, encrypt, urgent — bo'sh qoldirish mumkin): "
   );
   const decorators = parseDecorators(decRaw);
 
-  console.log("");
-  const summary = hub.send({
-    type,
-    locale,
-    channel,
-    recipientName,
-    text,
-    decorators,
-  });
+  const channel = resolveChannel(channelType);
+  const notification = createNotification(type, channel);
+  const localeFactory = getLocaleFactory(locale);
 
-  if (summary.failed === 0) {
-    console.log(`✅ Yuborildi: ${summary.total} tadan ${summary.succeeded} tasi`);
+  console.log("");
+  const record = notification.send(recipient, text, localeFactory, decorators);
+
+  if (record.success) {
+    console.log(`✅ Bildirishnoma muvaffaqiyatli yuborildi (${recipient.name})`);
   } else {
-    console.log(
-      `⚠️ Yuborildi: ${summary.total} tadan ${summary.succeeded} tasi (${summary.failed} ta xato)`
-    );
+    console.log(`❌ Yuborishda xatolik yuz berdi (${recipient.name})`);
   }
 }
 
-async function handleTemplates(reader: PromptReader, hub: NotifyHub): Promise<void> {
-  const templates = hub.listTemplates();
-  console.log("\nSaqlangan tarqatma shablonlari (Prototype):");
-  templates.forEach((tpl, idx) => {
-    console.log(`  ${idx + 1}. ${tpl.describe()}`);
-  });
-
-  const choiceRaw = await askRequired(
-    reader,
-    "Nusxalab yuborish uchun shablon raqamini kiriting (bekor qilish uchun Enter): "
-  );
-  if (!choiceRaw.trim()) {
-    return;
+async function handleRecipients(
+  reader: PromptReader,
+  recipients: Recipient[]
+): Promise<void> {
+  console.log("\nQabul qiluvchilar:");
+  for (const r of recipients) {
+    console.log(r.describe());
   }
 
-  const index = Number.parseInt(choiceRaw.trim(), 10) - 1;
-  if (Number.isNaN(index) || index < 0 || index >= templates.length) {
-    throw new Error("Noto'g'ri shablon raqami.");
-  }
-
-  const newText = await askRequired(
-    reader,
-    "Yangi matn (asl shablon matnini qoldirish uchun Enter): "
-  );
-  const newRecipient = await askRequired(
-    reader,
-    "Yangi qabul qiluvchi (asl qabul qiluvchini qoldirish uchun Enter): "
-  );
-
-  console.log("");
-  const summary = hub.sendFromTemplate(index, {
-    text: newText,
-    recipientName: newRecipient,
-  });
-  console.log(`✅ Shablondan yuborildi: ${summary.total} tadan ${summary.succeeded} tasi`);
-}
-
-async function handleRecipients(reader: PromptReader, hub: NotifyHub): Promise<void> {
-  console.log("\n" + hub.listRecipientsTree());
   const addChoice = await askRequired(
     reader,
-    "\nYangi foydalanuvchi qo'shasizmi? (ha / Enter — qaytish): "
+    "\nYangi qabul qiluvchi qo'shasizmi? (ha / Enter — qaytish): "
   );
   if (addChoice.trim().toLowerCase() !== "ha") {
     return;
@@ -183,18 +190,24 @@ async function handleRecipients(reader: PromptReader, hub: NotifyHub): Promise<v
   const name = await askRequired(reader, "Ism: ");
   const phone = await askRequired(reader, "Telefon (masalan +998901234567): ");
   const tg = await askRequired(reader, "Telegram username (ixtiyoriy, @ bilan): ");
-  const group = await askRequired(reader, "Guruh nomi (ixtiyoriy, masalan 301-guruh): ");
 
   if (!name.trim()) {
     throw new Error("Ism bo'sh bo'lishi mumkin emas.");
   }
 
-  const created = hub.addUser(name, phone, tg, group);
+  const created = new Recipient(
+    `u${recipients.length + 1}`,
+    name.trim(),
+    phone.trim(),
+    tg.trim() || undefined
+  );
+  recipients.push(created);
   console.log(`✅ Qo'shildi: ${created.describe()}`);
 }
 
 async function main(): Promise<void> {
-  const hub = new NotifyHub();
+  const recipients = createDefaultRecipients();
+  const history = NotificationHistory.getInstance();
   const reader = new PromptReader();
 
   try {
@@ -204,8 +217,7 @@ async function main(): Promise<void> {
       console.log("1. Bildirishnoma yuborish");
       console.log("2. Tarix");
       console.log("3. Statistika");
-      console.log("4. Tarqatma shablonlari");
-      console.log("5. Qabul qiluvchilar");
+      console.log("4. Qabul qiluvchilar");
       console.log("0. Chiqish");
 
       const choice = await reader.question("> ");
@@ -216,26 +228,23 @@ async function main(): Promise<void> {
       try {
         switch (choice.trim()) {
           case "1":
-            await handleSend(reader, hub);
+            await handleSend(reader, recipients);
             break;
           case "2":
-            console.log("\n" + hub.showHistory());
+            console.log("\n" + history.formatHistory());
             break;
           case "3":
-            console.log("\n" + hub.showStats());
+            console.log("\n" + history.formatStats());
             break;
           case "4":
-            await handleTemplates(reader, hub);
-            break;
-          case "5":
-            await handleRecipients(reader, hub);
+            await handleRecipients(reader, recipients);
             break;
           case "0":
             running = false;
             console.log("Xayr!");
             break;
           default:
-            console.log("Noto'g'ri tanlov. 0 dan 5 gacha raqam kiriting.");
+            console.log("Noto'g'ri tanlov. 0 dan 4 gacha raqam kiriting.");
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

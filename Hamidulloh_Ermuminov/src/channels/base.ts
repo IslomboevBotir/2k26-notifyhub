@@ -1,4 +1,4 @@
-import type { User } from "../recipients/recipients.js";
+import type { Recipient } from "../recipients/recipients.js";
 import type { ChannelType, NotificationType } from "../types.js";
 
 /**
@@ -10,5 +10,5 @@ import type { ChannelType, NotificationType } from "../types.js";
  */
 export interface Channel {
   readonly name: ChannelType;
-  send(recipient: User, text: string, notificationType: NotificationType): boolean;
+  send(recipient: Recipient, text: string, notificationType: NotificationType): boolean;
 }

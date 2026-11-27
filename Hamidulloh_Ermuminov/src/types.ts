@@ -21,11 +21,3 @@ export interface DeliveryRecord {
   message: string;
   success: boolean;
 }
-
-export interface DispatchSummary {
-  total: number;
-  succeeded: number;
-  failed: number;
-  renderedMessage: string;
-  records: DeliveryRecord[];
-}

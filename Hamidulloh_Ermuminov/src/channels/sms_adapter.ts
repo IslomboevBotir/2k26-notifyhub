@@ -1,4 +1,4 @@
-import type { User } from "../recipients/recipients.js";
+import type { Recipient } from "../recipients/recipients.js";
 import type { ChannelType, NotificationType } from "../types.js";
 import type { Channel } from "./base.js";
 
@@ -45,7 +45,7 @@ export class SmsChannelAdapter implements Channel {
     this.gateway = gateway;
   }
 
-  public send(recipient: User, text: string, notificationType: NotificationType): boolean {
+  public send(recipient: Recipient, text: string, notificationType: NotificationType): boolean {
     const payload = new Uint8Array(Buffer.from(text, "utf-8"));
     const priorityCode = SmsChannelAdapter.PRIORITY_MAP[notificationType];
     const statusCode = this.gateway.sendSms(recipient.phone, payload, priorityCode);

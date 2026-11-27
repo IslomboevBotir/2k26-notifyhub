@@ -6,11 +6,10 @@ import {
   type MessageComponent,
 } from "../decorators/message_decorators.js";
 import type { LocaleFactory, MessageTemplate } from "../locales/factories.js";
-import type { RecipientComponent, User } from "../recipients/recipients.js";
+import type { Recipient } from "../recipients/recipients.js";
 import type {
   DecoratorKind,
   DeliveryRecord,
-  DispatchSummary,
   NotificationType,
 } from "../types.js";
 
@@ -54,59 +53,35 @@ export abstract class Notification {
   }
 
   public send(
-    recipient: RecipientComponent,
+    recipient: Recipient,
     rawText: string,
     localeFactory: LocaleFactory,
     decorators: readonly DecoratorKind[] = [],
     options?: DecoratorOptions
-  ): DispatchSummary {
+  ): DeliveryRecord {
     const renderedMessage = this.formatMessage(rawText, localeFactory, decorators, options);
-    const users = recipient.getUsers();
-    const history = NotificationHistory.getInstance();
-    const records: DeliveryRecord[] = [];
     const sentAt = options?.date ?? new Date();
+    const ok = this.channel.send(recipient, renderedMessage, this.type);
 
-    let succeeded = 0;
-    let failed = 0;
-
-    for (const user of users) {
-      const ok = this.channel.send(user, renderedMessage, this.type);
-      if (ok) {
-        succeeded += 1;
-      } else {
-        failed += 1;
-      }
-
-      const contact = this.resolveContact(user);
-      const saved = history.record({
-        timestamp: sentAt,
-        type: this.type,
-        locale: localeFactory.locale,
-        channel: this.channel.name,
-        recipientName: user.name,
-        recipientContact: contact,
-        message: renderedMessage,
-        success: ok,
-      });
-      records.push(saved);
-    }
-
-    return {
-      total: users.length,
-      succeeded,
-      failed,
-      renderedMessage,
-      records,
-    };
+    return NotificationHistory.getInstance().record({
+      timestamp: sentAt,
+      type: this.type,
+      locale: localeFactory.locale,
+      channel: this.channel.name,
+      recipientName: recipient.name,
+      recipientContact: this.resolveContact(recipient),
+      message: renderedMessage,
+      success: ok,
+    });
   }
 
-  private resolveContact(user: User): string {
+  private resolveContact(recipient: Recipient): string {
     if (this.channel.name === "sms") {
-      return user.phone;
+      return recipient.phone;
     }
     if (this.channel.name === "telegram") {
-      return user.telegramHandle ?? "yo'q";
+      return recipient.telegramHandle ?? "yo'q";
     }
-    return user.name;
+    return recipient.name;
   }
 }

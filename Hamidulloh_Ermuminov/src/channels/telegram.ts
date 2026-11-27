@@ -1,4 +1,4 @@
-import type { User } from "../recipients/recipients.js";
+import type { Recipient } from "../recipients/recipients.js";
 import type { ChannelType, NotificationType } from "../types.js";
 import type { Channel } from "./base.js";
 
@@ -11,7 +11,7 @@ import type { Channel } from "./base.js";
 export class TelegramChannel implements Channel {
   public readonly name: ChannelType = "telegram";
 
-  public send(recipient: User, text: string, _notificationType: NotificationType): boolean {
+  public send(recipient: Recipient, text: string, _notificationType: NotificationType): boolean {
     const handle = recipient.telegramHandle?.trim();
     if (!handle || !handle.startsWith("@")) {
       console.log(`[TELEGRAM XATO → ${recipient.name}] Telegram username mavjud emas.`);

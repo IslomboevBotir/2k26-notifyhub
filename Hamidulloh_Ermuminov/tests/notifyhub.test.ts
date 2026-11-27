@@ -4,14 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, it } from "node:test";
 import type { Channel } from "../src/channels/base.js";
-import { ChannelFactory } from "../src/channels/factory.js";
 import { FileChannel } from "../src/channels/file.js";
 import { LegacySmsGateway, SmsChannelAdapter } from "../src/channels/sms_adapter.js";
 import { TelegramChannel } from "../src/channels/telegram.js";
-import { NotificationBuilder } from "../src/core/builder.js";
 import { NotificationHistory } from "../src/core/history.js";
-import { NotifyHub } from "../src/core/hub.js";
-import { BroadcastTemplate } from "../src/core/prototype.js";
 import {
   EncryptDecorator,
   PlainMessage,
@@ -21,18 +17,34 @@ import {
 } from "../src/decorators/message_decorators.js";
 import { EnFactory, RuFactory, UzFactory } from "../src/locales/factories.js";
 import { AlertNotification, ReminderNotification } from "../src/notifications/types.js";
-import { Group, User } from "../src/recipients/recipients.js";
+import { Recipient } from "../src/recipients/recipients.js";
 import type { ChannelType, NotificationType } from "../src/types.js";
 
-describe("NotifyHub Design Patterns", () => {
+describe("NotifyHub — 5 ta majburiy pattern", () => {
   beforeEach(() => {
     NotificationHistory.getInstance().clear();
   });
 
-  it("Singleton: NotificationHistory har doim bitta nusxa qaytaradi", () => {
+  it("Singleton: NotificationHistory har doim bitta nusxa qaytaradi va statistikani hisoblaydi", () => {
     const h1 = NotificationHistory.getInstance();
     const h2 = NotificationHistory.getInstance();
     assert.strictEqual(h1, h2);
+
+    const ali = new Recipient("u1", "Ali", "+998901112233", "@ali");
+    const bobur = new Recipient("u2", "Bobur", "not-a-phone");
+
+    const sms = new SmsChannelAdapter(new LegacySmsGateway());
+    const alert = new AlertNotification(sms);
+
+    alert.send(ali, "Server ishlamayapti", new UzFactory(), ["timestamp"]);
+    alert.send(bobur, "Xato test", new UzFactory());
+
+    const stats = h2.getStats();
+    assert.equal(stats.total, 2);
+    assert.equal(stats.succeeded, 1);
+    assert.equal(stats.failed, 1);
+    assert.equal(stats.byChannel.sms, 2);
+    assert.equal(stats.byType.alert, 2);
   });
 
   it("Abstract Factory: har bir til oilasi o'z shablonlarini izchil yaratadi", () => {
@@ -40,8 +52,14 @@ describe("NotifyHub Design Patterns", () => {
     const ru = new RuFactory();
     const en = new EnFactory();
 
-    assert.equal(uz.createAlertTemplate().render("Server ishlamayapti"), "⚠️ DIQQAT: Server ishlamayapti");
-    assert.equal(ru.createAlertTemplate().render("Сервер недоступен"), "⚠️ ВНИМАНИЕ: Сервер недоступен");
+    assert.equal(
+      uz.createAlertTemplate().render("Server ishlamayapti"),
+      "⚠️ DIQQAT: Server ishlamayapti"
+    );
+    assert.equal(
+      ru.createAlertTemplate().render("Сервер недоступен"),
+      "⚠️ ВНИМАНИЕ: Сервер недоступен"
+    );
     assert.equal(en.createPromoTemplate().render("Sale 50%"), "🎁 Promo: Sale 50%");
   });
 
@@ -57,7 +75,10 @@ describe("NotifyHub Design Patterns", () => {
     assert.equal(urgent.getText(), "🔴 TIZIM TO'XTADI");
 
     const encrypted = new EncryptDecorator(new PlainMessage("Salom"), "base64");
-    assert.equal(encrypted.getText(), `[ENC:${Buffer.from("Salom", "utf-8").toString("base64")}]`);
+    assert.equal(
+      encrypted.getText(),
+      `[ENC:${Buffer.from("Salom", "utf-8").toString("base64")}]`
+    );
   });
 
   it("Adapter: SmsChannelAdapter LegacySmsGateway ga to'g'ri moslaydi", () => {
@@ -75,13 +96,13 @@ describe("NotifyHub Design Patterns", () => {
     }
 
     const adapter = new SmsChannelAdapter(new SpyGateway());
-    const validUser = new User("u1", "Ali", "+998901112233");
-    const invalidUser = new User("u2", "Bobur", "bad-phone");
+    const validRecipient = new Recipient("u1", "Ali", "+998901112233");
+    const invalidRecipient = new Recipient("u2", "Bobur", "bad-phone");
 
-    assert.equal(adapter.send(validUser, "Test alert", "alert"), true);
-    assert.equal(adapter.send(validUser, "Test reminder", "reminder"), true);
-    assert.equal(adapter.send(validUser, "Test promo", "promo"), true);
-    assert.equal(adapter.send(invalidUser, "Should fail", "alert"), false);
+    assert.equal(adapter.send(validRecipient, "Test alert", "alert"), true);
+    assert.equal(adapter.send(validRecipient, "Test reminder", "reminder"), true);
+    assert.equal(adapter.send(validRecipient, "Test promo", "promo"), true);
+    assert.equal(adapter.send(invalidRecipient, "Should fail", "alert"), false);
 
     assert.deepEqual(
       captured.map((c) => c.priorityCode),
@@ -91,21 +112,21 @@ describe("NotifyHub Design Patterns", () => {
   });
 
   it("Bridge: istalgan bildirishnoma turi istalgan yangi kanal bilan ishlaydi", () => {
-    const deliveries: Array<{ user: string; text: string; type: NotificationType }> = [];
+    const deliveries: Array<{ recipient: string; text: string; type: NotificationType }> = [];
     const customChannel: Channel = {
       name: "console" as ChannelType,
-      send(user, text, notificationType) {
-        deliveries.push({ user: user.name, text, type: notificationType });
+      send(recipient, text, notificationType) {
+        deliveries.push({ recipient: recipient.name, text, type: notificationType });
         return true;
       },
     };
 
-    const user = new User("u1", "Malika", "+998913334455");
+    const recipient = new Recipient("u1", "Malika", "+998913334455");
     const alert = new AlertNotification(customChannel);
     const reminder = new ReminderNotification(customChannel);
 
-    alert.send(user, "Xavf", new UzFactory());
-    reminder.send(user, "Meeting", new EnFactory());
+    alert.send(recipient, "Xavf", new UzFactory());
+    reminder.send(recipient, "Meeting", new EnFactory());
 
     assert.equal(deliveries.length, 2);
     assert.equal(deliveries[0].type, "alert");
@@ -114,92 +135,28 @@ describe("NotifyHub Design Patterns", () => {
     assert.equal(deliveries[1].text, "📌 Reminder: Meeting");
   });
 
-  it("Composite: ichma-ich guruhlarga yuborishda barcha foydalanuvchilar noyob yig'iladi", () => {
-    const ali = new User("u1", "Ali", "+998901112233", "@ali");
-    const vali = new User("u2", "Vali", "+998907778899", "@vali");
-    const g301 = new Group("301", [ali, vali]);
-    const g302 = new Group("302", [ali]); // Ali ikki guruhda ham bor
-    const course = new Group("3-kurs", [g301, g302]);
-
-    const users = course.getUsers();
-    assert.equal(users.length, 2);
-    assert.deepEqual(
-      users.map((u) => u.name),
-      ["Ali", "Vali"]
-    );
-  });
-
-  it("Builder + Factory Method + FileChannel: to'liq zanjir ishlaydi", () => {
+  it("FileChannel va TelegramChannel: faylga yozish va Telegram tekshiruvi ishlaydi", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "notifyhub-"));
     const logFile = path.join(tempDir, "out.log");
-    const fileChannel = ChannelFactory.create("file", { filePath: logFile });
-    assert.ok(fileChannel instanceof FileChannel);
+    const fileChannel = new FileChannel(logFile);
+    const telegramChannel = new TelegramChannel();
 
-    const user = new User("u1", "Ali", "+998901112233");
-    const prepared = new NotificationBuilder()
-      .type("reminder")
-      .locale("uz")
-      .channel(fileChannel)
-      .to(user)
-      .text("Ertaga imtihon")
-      .withTimestamp(new Date(2026, 10, 7, 9, 0))
-      .withSignature()
-      .build();
+    const ali = new Recipient("u1", "Ali", "+998901112233", "@ali");
+    const bobur = new Recipient("u2", "Bobur", "+998901112244");
 
-    const summary = prepared.send();
-    assert.equal(summary.total, 1);
-    assert.equal(summary.succeeded, 1);
+    const fileReminder = new ReminderNotification(fileChannel);
+    fileReminder.send(ali, "Ertaga imtihon", new UzFactory(), ["timestamp", "signature"], {
+      date: new Date(2026, 10, 7, 9, 0),
+    });
 
     const written = fs.readFileSync(logFile, "utf-8");
-    assert.match(written, /📌 Eslatma: Ertaga imtihon \[07\.11\.2026 09:00\] — NotifyHub jamoasi/);
+    assert.match(
+      written,
+      /📌 Eslatma: Ertaga imtihon \[07\.11\.2026 09:00\] — NotifyHub jamoasi/
+    );
     fs.rmSync(tempDir, { recursive: true, force: true });
-  });
 
-  it("Prototype: clone() asl shablonni o'zgartirmaydi", () => {
-    const user = new User("u1", "Ali", "+998901112233", "@ali");
-    const original = new BroadcastTemplate({
-      id: "t1",
-      name: "Haftalik",
-      type: "reminder",
-      locale: "uz",
-      channel: "telegram",
-      recipient: user,
-      text: "Asl matn",
-      decorators: ["timestamp"],
-    });
-
-    const copy = original.clone();
-    copy.text = "Yangi matn";
-    copy.decorators.push("signature");
-
-    assert.equal(original.text, "Asl matn");
-    assert.deepEqual(original.decorators, ["timestamp"]);
-    assert.equal(copy.text, "Yangi matn");
-    assert.deepEqual(copy.decorators, ["timestamp", "signature"]);
-  });
-
-  it("Facade + Singleton statistika: muvaffaqiyatli va xato yuborishlarni hisoblaydi", () => {
-    const hub = new NotifyHub();
-    const summary = hub.send({
-      type: "alert",
-      locale: "uz",
-      channel: "sms",
-      recipientName: "barcha",
-      text: "Test",
-    });
-
-    // barcha guruhida 4 ta user bor: 3 ta to'g'ri raqam + 1 ta noto'g'ri raqam (Bobur)
-    assert.equal(summary.total, 4);
-    assert.equal(summary.succeeded, 3);
-    assert.equal(summary.failed, 1);
-
-    const stats = NotificationHistory.getInstance().getStats();
-    assert.equal(stats.total, 4);
-    assert.equal(stats.byChannel.sms, 4);
-    assert.equal(stats.byType.alert, 4);
-    assert.equal(stats.failed, 1);
-
-    const tg = ChannelFactory.create("telegram");
-    assert.ok(tg instanceof TelegramChannel);
+    assert.equal(telegramChannel.send(ali, "Salom", "alert"), true);
+    assert.equal(telegramChannel.send(bobur, "Salom", "alert"), false);
   });
 });

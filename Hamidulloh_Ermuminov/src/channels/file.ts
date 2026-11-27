@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { User } from "../recipients/recipients.js";
+import type { Recipient } from "../recipients/recipients.js";
 import type { ChannelType, NotificationType } from "../types.js";
 import type { Channel } from "./base.js";
 
@@ -18,7 +18,7 @@ export class FileChannel implements Channel {
     this.filePath = filePath;
   }
 
-  public send(recipient: User, text: string, notificationType: NotificationType): boolean {
+  public send(recipient: Recipient, text: string, notificationType: NotificationType): boolean {
     try {
       const dir = path.dirname(this.filePath);
       fs.mkdirSync(dir, { recursive: true });
