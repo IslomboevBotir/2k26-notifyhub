@@ -1,0 +1,16 @@
+{
+  "name": "notifyhub",
+  "version": "1.0.0",
+  "description": "NotifyHub — OOP & Design Patterns console notification service (Laboratoriya ishi №1)",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/main.js",
+    "dev": "tsc && node dist/src/main.js",
+    "test": "tsc && node --test dist/tests/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.7.3"
+  }
+}
