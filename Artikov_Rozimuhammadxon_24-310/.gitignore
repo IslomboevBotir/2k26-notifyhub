@@ -1,0 +1,16 @@
+# Bog'liqliklar va natija fayllari
+node_modules/
+outbox/
+dist/
+*.log
+
+# Shaxsiy fayllar
+HIMOYA_SAVOLLARI.md
+.env
+.env.*
+
+# IDE va tizim fayllari
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
