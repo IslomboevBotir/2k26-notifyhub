@@ -1,0 +1,6 @@
+name: notifyhub
+description: Sobirjonov Muzaffar — NotifyHub laboratoriya ishi.
+version: 1.0.0
+publish_to: none
+environment:
+  sdk: '>=3.0.0 <4.0.0'
