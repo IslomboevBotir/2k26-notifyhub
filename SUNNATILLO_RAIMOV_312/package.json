@@ -1,0 +1,16 @@
+{
+  "name": "notifyhub",
+  "version": "1.0.0",
+  "description": "NotifyHub - Bildirishnomalar xizmati (TypeScript)",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "test": "tsx --test tests/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
